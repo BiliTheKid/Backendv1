@@ -1,18 +1,13 @@
-from flask import Flask ,render_template ,redirect, url_for, request
-from flask import make_response
+from flask import make_response, jsonify
 #from flask import abort
 import yaml
-from flask import Flask, render_template, send_file, request, session, redirect, url_for
+from flask import Flask, render_template, request,redirect, url_for ,json
 from flask_mysqldb import MySQL
-
-
+from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
-#api = Api(app)
-#app = connexion.FlaskApp(__name__, specification_dir='./')
-#yaml.load('db.yaml',Loader=yaml.FullLoader)
-#app.add_api('api/db.yaml')
-#app.config['SECRET_KEY'] = 'catwifi'
+
+
 
 #Configure db
 db = yaml.load(open('C:\\Users\\yarde\\PycharmProjects\\Backendv1\\db.yaml'),Loader=yaml.FullLoader)
@@ -27,11 +22,59 @@ mysql = MySQL(app)
 @app.route('/')
 def home():
     #conn = db_connect.connect()  # connect to database
-    cur = mysql.connection.cursor()
+    #cur = mysql.connection.cursor()
     #cur.execute('INSERT INTO user( name , age ) VALUES (%s,%s)',('yarden','26'))
     #mysql.connection.commit()
     user_agent = request.headers.get('User-Agent')
     return '<p>Your browser is %s</p>' % user_agent
+
+
+@app.route('/signup',methods=['GET','POST'])
+def sign_up():
+    # read the posted values from the UI
+    #try:
+        _name=request.form['username']
+        _password=request.form['password']
+        _email=request.form['email']
+        _gender=request.form['gender']
+        _phone=request.form['phone']
+        _age=request.form['age']
+
+        if _name and _password and _email and _gender and _phone and _age:
+            cur = mysql.connection.cursor()
+
+            _hashed_password = generate_password_hash(_password)
+            cur.execute('INSERT INTO users( name , email , password ,gender , phone , age ) VALUES (%s,%s,%s,%s,%s,%s)',(_name,_email,_password,_gender,_phone,_age))
+            data = cur.fetchall()
+
+            if len(data) is 0:
+                mysql.connection.commit()
+                return json.dumps({'message': 'User created successfully !'})
+            else:
+                return json.dumps({'error': str(data[0])})
+        else:
+             return json.dumps({'html': '<span>Enter the required fields</span>'})
+
+    # except Exception as e:
+    #     return json.dumps({'error': str(e)})
+    # finally:
+    #     cur.close()
+
+
+@app.route('/showsignup')
+def showSignUp():
+   return render_template('signup.html')
+
+
+@app.route('/user')
+def display_user():
+    cur = mysql.connection.cursor()
+    result_value = cur.execute("SELECT * FROM user")
+    print(result_value)
+    if result_value > 0:
+        users = cur.fetchall()
+        return users[0]
+    return render_template('user.html')
 
 
 
@@ -40,6 +83,8 @@ def home():
 def welcome():
     return render_template('welcome.html')
 
+
+
 #cookie response
 @app.route('/cookie')
 def coockie():
@@ -47,26 +92,9 @@ def coockie():
     response.set_cookie('answer', '42')
     return response
 
-@app.route('/api')
-def api():
- pass
-#
-# @app.route('/user/<name>')
-# def user(name):
-#     return render_template('user.html', name=name)
 
-#
-# def load_user(id):
-#     list_of_user=[11,22,33,44]
-#     if id in list_of_user:
-#         return id
 
-# @app.route('/user/<id>')
-# def get_user(id):
-#   user = load_user(id)
-#   if not user:
-#     abort(404)
-#   return '<h1>Hello, %s</h1>' % user.name
+
 
 # Route for handling the login page logic
 @app.route('/login', methods=['GET', 'POST'])
@@ -79,7 +107,15 @@ def login():
             return redirect(url_for('home'))
     return render_template('login.html', error=error)
 
-
+@app.route('/users/<user_id>')
+def page(user_id):
+    print(user_id)
+    cur = mysql.connection.cursor()
+    query = """SELECT * FROM users WHERE id = {}""".format(0)
+    print(query)
+    users=cur.execute(query)
+    print(users)
+    return jsonify(users)
 
 
 #error handler
