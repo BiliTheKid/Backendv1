@@ -15,6 +15,7 @@ app.config['MYSQL_HOST']=db['mysql_host']
 app.config['MYSQL_USER']=db['mysql_user']
 app.config['MYSQL_PASSWORD']=db['mysql_password']
 app.config['MYSQL_DB']=db['mysql_db']
+app.config['MYSQL_CURSORCLASS']='DictCursor'
 mysql = MySQL(app)
 
 
@@ -33,6 +34,7 @@ def home():
 def sign_up():
     # read the posted values from the UI
     #try:
+        form = request.form
         _name=request.form['username']
         _password=request.form['password']
         _email=request.form['email']
@@ -66,15 +68,17 @@ def showSignUp():
    return render_template('signup.html')
 
 
-@app.route('/user')
-def display_user():
+@app.route('/users',methods=["GET"])
+def users():
     cur = mysql.connection.cursor()
-    result_value = cur.execute("SELECT * FROM user")
+    result_value = cur.execute("SELECT * FROM users")
     print(result_value)
     if result_value > 0:
         users = cur.fetchall()
-        return users[0]
-    return render_template('user.html')
+        #print(users)
+       #return users[0]
+    return jsonify(users)
+    #return render_template('users.html', users=users)
 
 
 
@@ -111,11 +115,11 @@ def login():
 def page(user_id):
     print(user_id)
     cur = mysql.connection.cursor()
-    query = """SELECT * FROM users WHERE id = {}""".format(0)
-    print(query)
-    users=cur.execute(query)
-    print(users)
-    return jsonify(users)
+    cur.execute("""SELECT * FROM users WHERE name = {}""".format(user_id))
+    rows = cur.fetchall()
+    print(rows)
+    #for row in rows:
+    return jsonify(rows)
 
 
 #error handler
